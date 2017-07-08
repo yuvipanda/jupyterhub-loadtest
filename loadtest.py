@@ -61,7 +61,7 @@ def main():
     executor = ThreadPoolExecutor(max_workers=args.parallel_users)
     futures = []
     for i in range(args.total_users):
-        futures.append(executor.submit(simulate_user, 'user-{}-{}'.format(args.total_users, args.parallel_users)))
+        futures.append(executor.submit(simulate_user, 'user-{}-{}-{}'.format(args.total_users, args.parallel_users, i)))
 
     counts = {True: 0, False: 0}
     i = 0
