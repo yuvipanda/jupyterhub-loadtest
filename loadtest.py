@@ -68,7 +68,7 @@ def main():
     for f in futures:
         i += 1
         counts[f.result()] += 1
-        if i % 50 == 0:
+        if i % args.parallel_users == 0:
             print(i, counts)
 
 if __name__ == '__main__':
