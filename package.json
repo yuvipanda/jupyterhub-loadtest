@@ -1,0 +1,28 @@
+{
+  "name": "stresshub",
+  "version": "1.0.0",
+  "description": "Load Testing helper scripts for JupyterHubs",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "dependencies": {
+    "@jupyterlab/services": "^0.47.0",
+    "request": "^2.81.0",
+    "request-promise": "^4.2.1",
+    "ws": "^3.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuvipanda/jupyterhub-loadtest.git"
+  },
+  "author": "",
+  "license": "3 Clause BSD",
+  "bugs": {
+    "url": "https://github.com/yuvipanda/jupyterhub-loadtest/issues"
+  },
+  "homepage": "https://github.com/yuvipanda/jupyterhub-loadtest#readme"
+}
