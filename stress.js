@@ -54,7 +54,6 @@ class User {
 
     async startKernel() {
         let cookieHeader = this.cookieJar.getCookieString(this.notebookUrl);
-        console.log('cookie is ' + cookieHeader);
 
         let serverSettings = services.ServerConnection.makeSettings({
             xhrFactory: function () { return new xhr.XMLHttpRequest(); },
@@ -66,8 +65,6 @@ class User {
         });
 
         let kernelSpecs = await services.Kernel.getSpecs(serverSettings);
-        console.log('Default spec:', kernelSpecs.default);
-        console.log('Available specs', Object.keys(kernelSpecs.kernelspecs));
         // use the default name
         let options = {
             name: kernelSpecs.default,
