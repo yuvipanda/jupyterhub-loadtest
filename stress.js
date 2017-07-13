@@ -26,6 +26,7 @@ class User {
             jar: this.cookieJar,
             resolveWithFullResponse: true
         });
+        console.log(self.username + ' logged in');
     }
 
     async startServer() {
@@ -40,12 +41,14 @@ class User {
                 resolveWithFullResponse: true
             });
             if (resp.request.uri.href == expectedUrl) {
+                console.log(self.username + ' server started');
                 return true;
             } else {
                 nextUrl = resp.request.uri.href;
                 await new Promise(r => setTimeout(r, 1000));
             }
         }
+        console.log(self.username + ' server failed');
         return false;
     };
 
@@ -71,6 +74,7 @@ class User {
             serverSettings: serverSettings
         };
         this.kernel = await services.Kernel.startNew(options);
+        console.log(self.username + ' kernel started');
     }
 
     async executeCode() {
@@ -81,7 +85,7 @@ class User {
                 if (msg.content.text == '6765\n') {
                     setTimeout(executeFib, 1000);
                     let timeTaken = process.hrtime(startTime);
-                    console.log(timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+                    console.log(self.username + ' has taken ', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
                 }
             };
         };
