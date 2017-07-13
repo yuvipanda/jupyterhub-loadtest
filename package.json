@@ -9,7 +9,6 @@
   "dependencies": {
     "@jupyterlab/services": "^0.47.0",
     "commander": "^2.11.0",
-    "node-statsd-client": "^1.0.3",
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
     "statsd-client": "^0.4.0",
