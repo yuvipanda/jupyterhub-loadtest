@@ -6,6 +6,7 @@ const services = require('@jupyterlab/services');
 const ws = require('ws');
 const xhr = require('./xhr');
 const url = require('url');
+var program = require('commander');
 
 class User {
 
@@ -101,12 +102,10 @@ class User {
 
 }
 
-async function main() {
-    var u = new User('http://localhost:8000', 'wat' + String(14), 'wat');
-
+async function main(hubUrl, userCount, userPrefix) {
     try {
-        for(var i = 0; i <10; i++) {
-            let u = new User('http://localhost:8000', 'wat' + String(i), 'wat');
+        for(var i = 0; i < userCount; i++) {
+            let u = new User(hubUrl, userPrefix + String(i), 'wat');
             u.login().then(() => u.startServer()).then(() => u.startKernel()).then(() => u.executeCode()).then(() => console.log("DONE!"));
         }
     } catch (e) {
@@ -114,4 +113,7 @@ async function main() {
     }
 }
 
-main();
+program
+    .arguments('<hubUrl> <userCount> <userPrefix>')
+    .action(main)
+    .parse(process.argv);
