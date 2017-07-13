@@ -40,15 +40,16 @@ class User {
                 resolveWithFullResponse: true
             });
             if (resp.request.uri.href == expectedUrl) {
-                break;
+                return true;
             } else {
                 nextUrl = resp.request.uri.href;
                 await new Promise(r => setTimeout(r, 1000));
             }
         }
-    }
+        return false;
+    };
 
-    async getKernels() {
+    async startKernel() {
         let cookieHeader = this.cookieJar.getCookieString(this.notebookUrl);
         console.log('cookie is ' + cookieHeader);
 
@@ -61,35 +62,42 @@ class User {
             baseUrl: this.notebookUrl
         });
 
-        services.Kernel.getSpecs(serverSettings).then(kernelSpecs => {
-            console.log('Default spec:', kernelSpecs.default);
-            console.log('Available specs', Object.keys(kernelSpecs.kernelspecs));
-            // use the default name
-            let options = {
-                name: kernelSpecs.default,
-                serverSettings: serverSettings
-            };
-            services.Kernel.startNew(options).then(kernel => {
-                // Execute and handle replies.
-                let future = kernel.requestExecute({ code: 'print("hello")'} );
-                future.onDone = () => {
-                    console.log('Future is fulfilled');
-                };
-                future.onIOPub = (msg) => {
-                    console.log(msg.content);  // Print rich output data.
-                };
-            });
-        });
+        let kernelSpecs = await services.Kernel.getSpecs(serverSettings);
+        console.log('Default spec:', kernelSpecs.default);
+        console.log('Available specs', Object.keys(kernelSpecs.kernelspecs));
+        // use the default name
+        let options = {
+            name: kernelSpecs.default,
+            serverSettings: serverSettings
+        };
+        this.kernel = await services.Kernel.startNew(options);
     }
+
+    async executeCode() {
+        let executeFib = ()=> {
+            let future = this.kernel.requestExecute({ code: 'fib = lambda n: n if n < 2 else fib(n-1) + fib(n-2); print(fib(20))'} );
+            let startTime = process.hrtime();
+            future.onIOPub = (msg) => {
+                if (msg.content.text == '6765\n') {
+                    setTimeout(executeFib, 1000);
+                    let timeTaken = process.hrtime(startTime);
+                    console.log(timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+                }
+            };
+        };
+        executeFib();
+    }
+
 }
 
 async function main() {
     var u = new User('http://localhost:8000', 'wat' + String(14), 'wat');
 
     try {
-        await u.login();
-        await u.startServer();
-        await u.getKernels();
+        for(var i = 0; i <10; i++) {
+            let u = new User('http://localhost:8000', 'wat' + String(i), 'wat');
+            u.login().then(() => u.startServer()).then(() => u.startKernel()).then(() => u.executeCode()).then(() => console.log("DONE!"));
+        }
     } catch (e) {
         console.log(e);
     }
