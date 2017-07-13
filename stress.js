@@ -54,14 +54,19 @@ class User {
     };
 
     async startKernel() {
-        let cookieHeader = this.cookieJar.getCookieString(this.notebookUrl);
+        let headers = {
+            'Cookie': this.cookieJar.getCookieString(this.notebookUrl)
+        };
+        this.cookieJar.getCookies(this.notebookUrl).forEach((cookie) => {
+            if (cookie.key == '_xsrf') { headers['X-XSRFToken'] = cookie.value };
+        });
 
         let serverSettings = services.ServerConnection.makeSettings({
             xhrFactory: function () { return new xhr.XMLHttpRequest(); },
             wsFactory: function (url, protocol) {
-                return new ws(url, protocol, {'headers': {'Cookie': cookieHeader}});
+                return new ws(url, protocol, {'headers': headers});
             },
-            requestHeaders: {'Cookie': cookieHeader},
+            requestHeaders: headers,
             baseUrl: this.notebookUrl
         });
 
@@ -71,7 +76,11 @@ class User {
             name: kernelSpecs.default,
             serverSettings: serverSettings
         };
-        this.kernel = await services.Kernel.startNew(options);
+        try {
+            this.kernel = await services.Kernel.startNew(options);
+        } catch(e) {
+            console.log(e);
+        }
         console.log(this.username + ' kernel started');
     }
 
