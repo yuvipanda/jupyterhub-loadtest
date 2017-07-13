@@ -1,10 +1,11 @@
 /*
   Script that simulates a single user on a JupyterHub
   */
-var request = require('request-promise').defaults({simple: false});
-var services = require('@jupyterlab/services');
-var ws = require('ws');
-var xhr = require('./xhr');
+const request = require('request-promise').defaults({simple: false});
+const services = require('@jupyterlab/services');
+const ws = require('ws');
+const xhr = require('./xhr');
+const url = require('url');
 
 class User {
 
