@@ -33,7 +33,7 @@ class User {
     async startServer() {
         var nextUrl = this.hubUrl + '/hub/spawn';
         for (var i = 0; i < 20; i++) {
-            var expectedUrl = this.notebookUrl + '/tree';
+            var expectedUrl = this.notebookUrl + '/tree?';
             var resp = await request({
                 method: 'GET',
                 url: nextUrl,
