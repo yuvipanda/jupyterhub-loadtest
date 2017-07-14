@@ -41,7 +41,7 @@ class User {
     async startServer() {
         let startTime = process.hrtime();
         var nextUrl = this.hubUrl + '/hub/spawn';
-        for (var i = 0; i < 20; i++) {
+        for (var i = 0; i < 300; i++) {
             var expectedUrl = this.notebookUrl + '/tree?';
             try {
                 var resp = await request({
