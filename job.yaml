@@ -20,9 +20,9 @@ spec:
         name: stress
         env:
           - name: HUB_URL
-            value: http://13.88.191.24
+            value: http://CONNECT_IP
           - name: COUNT
-            value: RUN_COUNT
+            value: "RUN_COUNT"
           - name: STATSD_PREFIX
             value: jh-perf-01
           - name: STATSD_HOST
