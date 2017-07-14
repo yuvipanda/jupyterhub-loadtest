@@ -83,7 +83,7 @@ class User {
     async startKernel() {
         let startTime = process.hrtime();
         let headers = {
-            'Cookie': this.cookieJar.getCookieString(this.notebookUrl)
+            'Cookie': this.cookieJar.getCookieString(this.notebookUrl + '/')
         };
         this.cookieJar.getCookies(this.notebookUrl).forEach((cookie) => {
             if (cookie.key == '_xsrf') { headers['X-XSRFToken'] = cookie.value };
@@ -111,7 +111,7 @@ class User {
             let timeTaken = process.hrtime(startTime);
             this.statsd.increment('kernel-start.failure');
             this.statsd.timing('kernel-start.failure', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
-            console.log(e.stack);
+            throw(e);
         }
     }
 

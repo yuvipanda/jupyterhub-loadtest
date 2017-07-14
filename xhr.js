@@ -584,7 +584,7 @@ exports.XMLHttpRequest = function() {
    */
   this.dispatchEvent = function(event) {
     if (typeof self["on" + event] === "function") {
-        self["on" + event]({'message': 'JUST A HACK!'});
+        self["on" + event]({'message': this.responseText});
     }
     if (event in listeners) {
       for (var i = 0, len = listeners[event].length; i < len; i++) {
