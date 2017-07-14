@@ -31,11 +31,10 @@ class User {
                 resolveWithFullResponse: true
             });
             this.statsd.increment('login.success');
-            console.log(this.username + ' logged in');
         } catch(c) {
             this.statsd.increment('login.failure');
             console.log(this.username + ' login failed!');
-            console.log(c);
+            console.log(c.stack);
         }
     }
 
@@ -44,15 +43,27 @@ class User {
         var nextUrl = this.hubUrl + '/hub/spawn';
         for (var i = 0; i < 20; i++) {
             var expectedUrl = this.notebookUrl + '/tree?';
-            var resp = await request({
-                method: 'GET',
-                url: nextUrl,
-                jar: this.cookieJar,
-                followRedirect: function(req) {return true;},
-                resolveWithFullResponse: true
-            });
+            try {
+                var resp = await request({
+                    method: 'GET',
+                    url: nextUrl,
+                    jar: this.cookieJar,
+                    followRedirect: function(req) {return true;},
+                    resolveWithFullResponse: true
+                });
+            } catch(e) {
+                // LOL @ STATE OF ERROR HANDLING IN JS?!@?
+                let timeTaken = process.hrtime(startTime);
+                if (e.message.startsWith('Error: Exceeded maxRedirects. Probably stuck in a redirect loop ')) {
+                    console.log('Redirect loop for user ' + this.username);
+                    this.statsd.increment('server-start.failure');
+                    this.statsd.timing('server-start.failure', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+                } else {
+                    console.log(e.stack);
+                }
+                return false;
+            }
             if (resp.request.uri.href == expectedUrl) {
-                console.log(this.username + ' server started');
                 let timeTaken = process.hrtime(startTime);
                 this.statsd.increment('server-start.success');
                 this.statsd.timing('server-start.success', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
@@ -87,23 +98,20 @@ class User {
             baseUrl: this.notebookUrl
         });
 
-        let kernelSpecs = await services.Kernel.getSpecs(serverSettings);
-        // use the default name
-        let options = {
-            name: kernelSpecs.default,
-            serverSettings: serverSettings
-        };
         try {
-            this.kernel = await services.Kernel.startNew(options);
+            let kernelSpecs = await services.Kernel.getSpecs(serverSettings);
+            this.kernel = await services.Kernel.startNew({
+                name: kernelSpecs.default,
+                serverSettings: serverSettings
+            });
             let timeTaken = process.hrtime(startTime);
             this.statsd.increment('kernel-start.success');
             this.statsd.timing('server-start.success', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
-            console.log(this.username + ' kernel started');
         } catch(e) {
             let timeTaken = process.hrtime(startTime);
             this.statsd.increment('kernel-start.failure');
             this.statsd.timing('kernel-start.failure', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
-            console.log(e);
+            console.log(e.stack);
         }
     }
 
@@ -124,20 +132,19 @@ class User {
 
 }
 
-async function main(hubUrl, userCount, userPrefix, statsdHost) {
+function main(hubUrl, userCount, userPrefix, statsdHost, statsdPrefix) {
 
-    console.log(statsdHost);
     try {
         for(var i = 0; i < userCount; i++) {
-            let u = new User(hubUrl, userPrefix + String(i), 'wat', new SDC({host: statsdHost, prefix: 'jhload.' + userPrefix}));
-            u.login().then(() => u.startServer()).then(() => u.startKernel()).then(() => u.executeCode()).then(() => console.log("DONE!"));
+            let u = new User(hubUrl, userPrefix + String(i), 'wat', new SDC({host: statsdHost, prefix: statsdPrefix}));
+            u.login().then(() => u.startServer()).then(() => u.startKernel()).then(() => u.executeCode());
         }
     } catch (e) {
-        console.log(e);
+        console.log(e.stack);
     }
 }
 
 program
-    .arguments('<hubUrl> <userCount> <userPrefix> <statsdHost>')
+    .arguments('<hubUrl> <userCount> <userPrefix> <statsdHost> <statsdPrefix>')
     .action(main)
     .parse(process.argv);
