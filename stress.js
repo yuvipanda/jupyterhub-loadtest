@@ -120,12 +120,18 @@ class User {
     async executeCode() {
         let executeFib = ()=> {
             let future = this.kernel.requestExecute({ code: 'fib = lambda n: n if n < 2 else fib(n-1) + fib(n-2); print(fib(20))'} );
+            // This will fire if we don't have an answer back from the kernel within 1s
             let startTime = process.hrtime();
+            let failureTimer = setTimeout(() => {
+                let timeTaken = process.hrtime(startTime);
+                this.emitEvent('code-execute.timeout', {duration: timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+            }, 1000);
             future.onIOPub = (msg) => {
+                clearTimeout(failureTimer);
+                let timeTaken = process.hrtime(startTime);
                 if (msg.content.text == '6765\n') {
                     setTimeout(executeFib, 1000);
-                    let timeTaken = process.hrtime(startTime);
-                    this.emitEvent('code-execute.success', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+                    this.emitEvent('code-execute.success', {duration: timeTaken[0] * 1000 + timeTaken[1] / 1000000});
                 }
             };
         };
