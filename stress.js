@@ -6,21 +6,27 @@ const services = require('@jupyterlab/services');
 const ws = require('ws');
 const xhr = require('./xhr');
 const url = require('url');
-const SDC = require('statsd-client')
 var program = require('commander');
 
 class User {
 
-    constructor(hubUrl, username, password, statsd) {
+    constructor(hubUrl, username, password) {
         this.hubUrl = hubUrl;
         this.username = username;
         this.password = password;
         this.cookieJar = request.jar();
         this.notebookUrl = this.hubUrl + '/user/' + this.username;
-        this.statsd = statsd;
+    }
+
+    emitEvent(type, event) {
+        event['type'] = type;
+        event['timestamp'] = Date.now();
+        event['user'] = this.username;
+        console.log(JSON.stringify(event));
     }
 
     async login() {
+        let startTime = process.hrtime();
         var postUrl = this.hubUrl + '/hub/login';
         try {
             await request({
@@ -30,11 +36,11 @@ class User {
                 jar: this.cookieJar,
                 resolveWithFullResponse: true
             });
-            this.statsd.increment('login.success');
+            let timeTaken = process.hrtime(startTime);
+            this.emitEvent('login.success', {duration: timeTaken[0] * 1000 + timeTaken[1] / 1000000});
         } catch(c) {
-            this.statsd.increment('login.failure');
-            console.log(this.username + ' login failed!');
-            console.log(c.stack);
+            let timeTaken = process.hrtime(startTime);
+            this.emitEvent('login.failure', {duration: timeTaken[0] * 1000 + timeTaken[1] / 1000000});
         }
     }
 
@@ -48,7 +54,9 @@ class User {
                     method: 'GET',
                     url: nextUrl,
                     jar: this.cookieJar,
-                    followRedirect: function(req) {return true;},
+                    followRedirect: function(req) {
+                        return true;
+                    },
                     resolveWithFullResponse: true
                 });
             } catch(e) {
@@ -56,8 +64,7 @@ class User {
                 let timeTaken = process.hrtime(startTime);
                 if (e.message.startsWith('Error: Exceeded maxRedirects. Probably stuck in a redirect loop ')) {
                     console.log('Redirect loop for user ' + this.username);
-                    this.statsd.increment('server-start.failure');
-                    this.statsd.timing('server-start.failure', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+                    this.emitEvent('server-start.toomanyredirects', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
                 } else {
                     console.log(e.stack);
                 }
@@ -65,18 +72,15 @@ class User {
             }
             if (resp.request.uri.href == expectedUrl) {
                 let timeTaken = process.hrtime(startTime);
-                this.statsd.increment('server-start.success');
-                this.statsd.timing('server-start.success', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+                this.emitEvent('server-start.success', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
                 return true;
             } else {
                 nextUrl = resp.request.uri.href;
                 await new Promise(r => setTimeout(r, 1000));
             }
         }
-        console.log(this.username + ' server failed');
         let timeTaken = process.hrtime(startTime);
-        this.statsd.increment('server-start.failure');
-        this.statsd.timing('server-start.failure', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+        this.emitEvent('server-start.failed', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
         return false;
     };
 
@@ -86,7 +90,7 @@ class User {
             'Cookie': this.cookieJar.getCookieString(this.notebookUrl + '/')
         };
         this.cookieJar.getCookies(this.notebookUrl).forEach((cookie) => {
-            if (cookie.key == '_xsrf') { headers['X-XSRFToken'] = cookie.value };
+            if (cookie.key == '_xsrf') { headers['X-XSRFToken'] = cookie.value; };
         });
 
         let serverSettings = services.ServerConnection.makeSettings({
@@ -105,12 +109,10 @@ class User {
                 serverSettings: serverSettings
             });
             let timeTaken = process.hrtime(startTime);
-            this.statsd.increment('kernel-start.success');
-            this.statsd.timing('server-start.success', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+            this.emitEvent('kernel-start.success', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
         } catch(e) {
             let timeTaken = process.hrtime(startTime);
-            this.statsd.increment('kernel-start.failure');
-            this.statsd.timing('kernel-start.failure', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+            this.emitEvent('kernel-start.failure', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
             throw(e);
         }
     }
@@ -123,7 +125,7 @@ class User {
                 if (msg.content.text == '6765\n') {
                     setTimeout(executeFib, 1000);
                     let timeTaken = process.hrtime(startTime);
-                    this.statsd.timing('code-execute.success', timeTaken[0] * 1000 + timeTaken[1] / 1000000);
+                    this.emitEvent('code-execute.success', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
                 }
             };
         };
@@ -132,11 +134,11 @@ class User {
 
 }
 
-function main(hubUrl, userCount, userPrefix, statsdHost, statsdPrefix) {
+function main(hubUrl, userCount, userPrefix) {
 
     try {
         for(var i = 0; i < userCount; i++) {
-            let u = new User(hubUrl, userPrefix + String(i), 'wat', new SDC({host: statsdHost, prefix: statsdPrefix}));
+            let u = new User(hubUrl, userPrefix + String(i), 'wat');
             u.login().then(() => u.startServer()).then(() => u.startKernel()).then(() => u.executeCode());
         }
     } catch (e) {
@@ -145,6 +147,6 @@ function main(hubUrl, userCount, userPrefix, statsdHost, statsdPrefix) {
 }
 
 program
-    .arguments('<hubUrl> <userCount> <userPrefix> <statsdHost> <statsdPrefix>')
+    .arguments('<hubUrl> <userCount> <userPrefix>')
     .action(main)
     .parse(process.argv);
