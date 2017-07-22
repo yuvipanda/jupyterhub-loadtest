@@ -129,8 +129,35 @@ class Simple_Job(object):
         self.wait_times = func(**params, size=self.num_users)
 
 
+class JHub_Job_Set_Manager(Simple_Job_Set_Manager):
+
+    def rand_num_user_gen(self, mean=1):
+        params = {"lam": mean,
+                  "plus": 1
+                  }
+        super(JHub_Job_Set_Manager, self).rand_num_user_gen(params=params)
+
+    def rand_start_times_gen(self, mean=5):
+        params = {"rate": mean}
+        super(JHub_Job_Set_Manager, self).rand_start_times_gen(params=params)
+
+    def make_job_set(self):
+        super(JHub_Job_Set_Manager, self).make_job_set(job_type=JHub_Job)
+
+
+class JHub_Job(Simple_Job):
+
+    def rand_wait_times_gen(self, mean=5):
+        params = {"scale": mean}
+        super(JHub_Job, self).rand_wait_times_gen(params=params)
+
+    def rand_end_times_gen(self, mean=5):
+        params = {"scale": mean}
+        super(JHub_Job, self).rand_end_times_gen(params=params)
+
+
 if __name__ == "__main__":
-    a = Simple_Job_Set_Manager(20)
+    a = JHub_Job_Set_Manager(20)
     a.rand_start_times_gen()
     a.rand_num_user_gen()
     a.make_job_set()
