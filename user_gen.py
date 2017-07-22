@@ -21,13 +21,16 @@ def is_pos_inc_seq(seq):
 
 
 def is_any_int(x):
-    return (isinstance(x, int)
+    return (isinstance(x, int) 
             or isinstance(x, np.int64))
 
 
 def is_pos_int(seq):
     return (all([(x > 0 and is_any_int(x)) for x in seq]))
 
+
+
+    
 
 class Simple_Job_Set_Manager(object):
     def __init__(self, num_jobs):
@@ -80,10 +83,12 @@ class Simple_Job_Set_Manager(object):
             func = poisson_process
         self.start_times = func(**params, size=self.num_jobs)
 
-    def make_job_set(self):
+    def make_job_set(self, job_type=None):
+        if job_type is None:
+            job_type = Simple_Job
         job_array = list(np.zeros(shape=self.num_jobs))
         for i, x in enumerate(job_array):
-            job_array[i] = Simple_Job(self.users_per_job[i])
+            job_array[i] = job_type(self.users_per_job[i])
         self.jobs = job_array
         return self.jobs
 
@@ -127,6 +132,7 @@ class Simple_Job(object):
         if func is None:
             func = np.random.exponential
         self.wait_times = func(**params, size=self.num_users)
+        
 
 
 class JHub_Job_Set_Manager(Simple_Job_Set_Manager):
