@@ -1,9 +1,9 @@
 import numpy as np
 
 
-def poisson_process(rate=1, size=None):
-    exp_draws = np.random.exponential(scale=rate, size=size)
-    sum_exp_draws = [sum(exp_draws[:i]) for i, x in enumerate(exp_draws)]
+def simp_poisson_process(rate=1, size=None):
+    sum_exp_draws = np.cumsum(np.random.exponential(scale=rate, size=size))
+    # sum_exp_draws = [sum(exp_draws[:i]) for i, x in enumerate(exp_draws)]
     return sum_exp_draws
 
 
@@ -16,23 +16,26 @@ def int_exponential(rate=1, size=None):
     return np.round(exp_draws)
 
 
+def diffs_btw_exp(rate=1, size=None):
+    sorted_draws = sorted(np.random.exponential(scale=rate, size=size))
+    seq_diffs = [x-sorted_draws[i-1] for i, x in enumerate(sorted_draws)]
+    seq_diffs[0] = sorted_draws[0]
+    return np.array(seq_diffs)
+
+
 def is_pos_inc_seq(seq):
     return (sorted(seq) == list(seq) and all([x >= 0 for x in seq]))
 
 
 def is_any_int(x):
-    return (isinstance(x, int) 
-            or isinstance(x, np.int64))
+    return isinstance(x, (int, np.int64))
 
 
 def is_pos_int(seq):
     return (all([(x > 0 and is_any_int(x)) for x in seq]))
 
 
-
-    
-
-class Simple_Job_Set_Manager(object):
+class Simple_Job_Set(object):
     def __init__(self, num_jobs):
         self.num_jobs = num_jobs
 
@@ -80,7 +83,7 @@ class Simple_Job_Set_Manager(object):
         if params is None:
             params = {"rate": 5}
         if func is None:
-            func = poisson_process
+            func = simp_poisson_process
         self.start_times = func(**params, size=self.num_jobs)
 
     def make_job_set(self, job_type=None):
@@ -121,9 +124,9 @@ class Simple_Job(object):
 
     def rand_wait_times_gen(self, params=None, func=None):
         if params is None:
-            params = {"scale": 5}
+            params = {"rate": 5}
         if func is None:
-            func = np.random.exponential
+            func = diffs_btw_exp
         self.wait_times = func(**params, size=self.num_users)
 
     def rand_end_times_gen(self, params=None, func=None):
@@ -132,38 +135,41 @@ class Simple_Job(object):
         if func is None:
             func = np.random.exponential
         self.wait_times = func(**params, size=self.num_users)
-        
 
 
-class JHub_Job_Set_Manager(Simple_Job_Set_Manager):
+class JHub_Job_Set(Simple_Job_Set):
 
     def rand_num_user_gen(self, mean=1):
         params = {"lam": mean,
                   "plus": 1
                   }
-        super(JHub_Job_Set_Manager, self).rand_num_user_gen(params=params)
+        func = poisson_plus
+        super(JHub_Job_Set, self).rand_num_user_gen(params=params, func=func)
 
     def rand_start_times_gen(self, mean=5):
         params = {"rate": mean}
-        super(JHub_Job_Set_Manager, self).rand_start_times_gen(params=params)
+        func = simp_poisson_process
+        super(JHub_Job_Set, self).rand_start_times_gen(params=params, func=func)
 
     def make_job_set(self):
-        super(JHub_Job_Set_Manager, self).make_job_set(job_type=JHub_Job)
+        super(JHub_Job_Set, self).make_job_set(job_type=JHub_Job)
 
 
 class JHub_Job(Simple_Job):
 
     def rand_wait_times_gen(self, mean=5):
-        params = {"scale": mean}
-        super(JHub_Job, self).rand_wait_times_gen(params=params)
+        params = {"rate": mean}
+        func = diffs_btw_exp
+        super(JHub_Job, self).rand_wait_times_gen(params=params, func=func)
 
     def rand_end_times_gen(self, mean=5):
         params = {"scale": mean}
-        super(JHub_Job, self).rand_end_times_gen(params=params)
+        func = np.random.exponential
+        super(JHub_Job, self).rand_end_times_gen(params=params, func=func)
 
 
 if __name__ == "__main__":
-    a = JHub_Job_Set_Manager(20)
+    a = JHub_Job_Set(20)
     a.rand_start_times_gen()
     a.rand_num_user_gen()
     a.make_job_set()
