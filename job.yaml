@@ -3,7 +3,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: jupyterhub-benchmark-NUM
+  name: j-b-NUM
 spec:
   completions: 1
   parallelism: 1
