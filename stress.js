@@ -63,7 +63,6 @@ class User {
                 // LOL @ STATE OF ERROR HANDLING IN JS?!@?
                 let timeTaken = process.hrtime(startTime);
                 if (e.message.startsWith('Error: Exceeded maxRedirects. Probably stuck in a redirect loop ')) {
-                    console.log('Redirect loop for user ' + this.username);
                     this.emitEvent('server-start.toomanyredirects', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
                 } else {
                     console.log(e.stack);
@@ -113,7 +112,6 @@ class User {
         } catch(e) {
             let timeTaken = process.hrtime(startTime);
             this.emitEvent('kernel-start.failure', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
-            throw(e);
         }
     }
 
@@ -140,19 +138,19 @@ class User {
 
 }
 
-function main(hubUrl, userCount, userPrefix) {
+function main(hubUrl, userCount, userPrefix, jitter) {
 
-    try {
-        for(var i = 0; i < userCount; i++) {
-            let u = new User(hubUrl, userPrefix + String(i), 'wat');
-            u.login().then(() => u.startServer()).then(() => u.startKernel()).then(() => u.executeCode());
+    function launch(i) {
+        let u = new User(hubUrl, userPrefix + String(i), 'wat');
+        u.login().then(() => u.startServer()).then(() => u.startKernel()).then(() => u.executeCode());
+        if (i < userCount) {
+            setTimeout(function() { launch(i + 1);}, Math.random() * jitter);
         }
-    } catch (e) {
-        console.log(e.stack);
     }
+    launch(0);
 }
 
 program
-    .arguments('<hubUrl> <userCount> <userPrefix>')
+    .arguments('<hubUrl> <userCount> <userPrefix> <jitter>')
     .action(main)
     .parse(process.argv);

@@ -14,8 +14,8 @@ spec:
       - args:
           - /bin/sh
           - -c
-          - "node --trace-warnings stress.js ${HUB_URL} ${COUNT} `hostname` ${STATSD_HOST} ${STATSD_PREFIX}"
-        image: yuvipanda/jupyterhub-stress:v0.1
+          - "node --trace-warnings stress.js ${HUB_URL} ${COUNT} `hostname` ${JITTER}"
+        image: yuvipanda/jupyterhub-stress:v0.2
         imagePullPolicy: Always
         name: stress
         env:
@@ -23,7 +23,5 @@ spec:
             value: http://CONNECT_IP
           - name: COUNT
             value: "RUN_COUNT"
-          - name: STATSD_PREFIX
-            value: jh-perf-01
-          - name: STATSD_HOST
-            value: 13.64.254.234
+          - name: JITTER
+            value: "500"
