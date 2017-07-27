@@ -1,9 +1,9 @@
 # A simple bonnie++ setup that spins up 100 instances hitting NFS
 # We mostly just wanna see if NFS crashes
-apiVersion: batch/v1
-kind: Job
+apiVersion: v1
+kind: Pod
 metadata:
-  name: j-b-NUM
+  name: j-b-NUM-c
 spec:
   completions: 1
   parallelism: 1
