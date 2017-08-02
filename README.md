@@ -9,7 +9,8 @@ Load Testing helper scripts for JupyterHubs
     1. `NUM_RUNS`: How many times you want to run the load test.
     2. `RUN_COUNT`: How many simultaneous users you want to test in each run.
     3. `DELAY`: Delay between runs.
-    4. `CONNECT_IP`: Global Hub IP to connect to?
+    4. `CONNECT_IP`: Public-facing hub proxy IP (i.e. where you go to log in). 
+       If you have DNS set up, you could use this too.
 
 
 ## Checking results
