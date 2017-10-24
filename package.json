@@ -7,7 +7,7 @@
     "lib": "lib"
   },
   "dependencies": {
-    "@jupyterlab/services": "^0.47.0",
+    "@jupyterlab/services": "^0.50.2",
     "commander": "^2.11.0",
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
