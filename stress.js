@@ -195,18 +195,20 @@ class User {
 
 }
 
-function main(hubUrl, userCount, userPrefix, jitter) {
+function main(hubUrl, userCount, userActiveTimeMin, userActiveTimeMax, userPrefix, jitter) {
 
     async function launch(i) {
 
         // Wait for a random amount of time before actually launching
         await new Promise(r => setTimeout(r, Math.random() * jitter));
 
-        let u = new User(hubUrl, userPrefix + String(i), 'wat');
+        const u = new User(hubUrl, userPrefix + String(i), 'wat');
+
+        const userActiveDurationSeconds = parseFloat(userActiveTimeMin) + (Math.random() * (parseFloat(userActiveTimeMax) - parseFloat(userActiveTimeMin)));
         await u.login();
         await u.startServer();
         await u.startKernel();
-        await u.executeCode(5000);
+        await u.executeCode(userActiveDurationSeconds * 1000);
         await u.stopKernel();
         await u.stopServer();
 
@@ -218,6 +220,6 @@ function main(hubUrl, userCount, userPrefix, jitter) {
 }
 
 program
-    .arguments('<hubUrl> <userCount> <userPrefix> <jitter>')
+    .arguments('<hubUrl> <userCount> <userActiveTimeMin> <userActiveTimeMax> <userPrefix> <jitter>')
     .action(main)
     .parse(process.argv);
