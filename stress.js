@@ -1,6 +1,7 @@
 /*
   Script that simulates a single user on a JupyterHub
   */
+const os = require('os');
 const request = require('request-promise').defaults({simple: false});
 const services = require('@jupyterlab/services');
 const ws = require('ws');
@@ -10,41 +11,16 @@ const winston = require('winston');
 const winstonTcp = require('winston-tcp');
 var program = require('commander');
 
-function justMetaFormatter(k, v) {
-    // Remove the message and level keys, which are automatically added by winston
-    if (k == 'message' || k == 'level') { return undefined; };
-    return v;
-}
-const eventEmitter = new winston.Logger({
-    level: 'info',
-    transports: [
-        new winston.transports.Console({
-            showLevel: false,
-            formatter: (opts) => {
-                return JSON.stringify(opts.meta, justMetaFormatter);
-            },
-        }),
-        new winstonTcp({
-            host: '127.0.0.1',
-            port: 5170,
-            json: true,
-            timestamp: false,
-            formatter: (opts) => {
-                return JSON.stringify(opts.meta, justMetaFormatter);
-            },
-        })
-
-    ]
-});
 
 class User {
 
-    constructor(hubUrl, username, password) {
+    constructor(hubUrl, username, password, eventEmitter) {
         this.hubUrl = hubUrl;
         this.username = username;
         this.password = password;
         this.cookieJar = request.jar();
         this.notebookUrl = this.hubUrl + '/user/' + this.username;
+        this.eventEmitter = eventEmitter;
     }
 
     emitEvent(type, duration=0, event={}) {
@@ -52,7 +28,7 @@ class User {
         event['timestamp'] = Date.now();
         event['user'] = this.username;
         event['duration'] = duration[0] * 1000 + duration[1] / 1000000;
-        eventEmitter.info(event);
+        this.eventEmitter.info(event);
     }
 
     async login() {
@@ -225,16 +201,48 @@ class User {
 
 }
 
-function main(hubUrl, userCount, userActiveTimeMin, userActiveTimeMax, userPrefix, userStartTimeMax) {
+function main(hubUrl, userCount) {
+    function justMetaFormatter(k, v) {
+        // Remove the message and level keys, which are automatically added by winston
+        if (k == 'message' || k == 'level') { return undefined; };
+        return v;
+    }
+    const eventEmitter = new winston.Logger({
+        level: 'info',
+        transports: [
+            new winston.transports.Console({
+                showLevel: false,
+                formatter: (opts) => {
+                    return JSON.stringify(opts.meta, justMetaFormatter);
+                },
+            }),
+
+        ]
+    });
+
+    if (program.eventsTcpServer) {
+        const [host, port] = program.eventsTcpServer.split(':');
+        eventEmitter.transports.push(
+            new winstonTcp({
+                host: host,
+                port: parseInt(port),
+                json: true,
+                timestamp: false,
+                formatter: (opts) => {
+                    return JSON.stringify(opts.meta, justMetaFormatter);
+                },
+            })
+        );
+    }
 
     async function launch(i) {
 
         // Wait for a random amount of time before actually launching
-        await new Promise(r => setTimeout(r, Math.random() * userStartTimeMax * 1000));
+        await new Promise(r => setTimeout(r, Math.random() * program.usersStartTime * 1000));
 
-        const u = new User(hubUrl, userPrefix + String(i), 'wat');
+        const u = new User(hubUrl, program.userPrefix + String(i), 'wat', eventEmitter);
 
-        const userActiveDurationSeconds = parseFloat(userActiveTimeMin) + (Math.random() * (parseFloat(userActiveTimeMax) - parseFloat(userActiveTimeMin)));
+        const userActiveDurationSeconds = parseFloat(program.minUserActiveTime) + (Math.random() * (parseFloat(program.maxUserActiveTime) - parseFloat(program.minUserActiveTime)));
         await u.login();
         await u.startServer();
         await u.startKernel();
@@ -250,6 +258,12 @@ function main(hubUrl, userCount, userActiveTimeMin, userActiveTimeMax, userPrefi
 }
 
 program
-    .arguments('<hubUrl> <userCount> <userActiveTimeMin> <userActiveTimeMax> <userPrefix> <userStartTimeMax>')
+    .version('0.1')
+    .option('--min-user-active-time [min-user-active-time]', 'Minimum amount of seconds users should be active', 60)
+    .option('--max-user-active-time [max-user-active-time]', 'Maximum amount of seconds users should be active', 600)
+    .option('--users-start-time [users-start-time]', 'Period of time (seconds) to distribute starting the users in', 300)
+    .option('--user-prefix [user-prefix]', 'Prefix to use for generating usernames', os.hostname())
+    .option('--events-tcp-server [events-tcp-server]', 'Address of TCP server that will receive JSON events')
+    .arguments('<hub-url> <user-count>')
     .action(main)
     .parse(process.argv);

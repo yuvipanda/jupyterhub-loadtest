@@ -19,21 +19,18 @@ spec:
     spec:
       restartPolicy: Never
       containers:
-      - args:
-          - /bin/sh
-          - -c
-          - "node --trace-warnings stress.js ${HUB_URL} ${RUN_COUNT} ${MIN_RUN_TIME} ${MAX_RUN_TIME} `hostname` ${MAX_START_TIME}"
+      - command:
+          - node
+          - --trace-warnings
+          - stress.js
+          - --min-user-active-time
+          - {{ .Values.users.runTime.min | quote }}
+          - --max-user-active-time
+          - {{ .Values.users.runTime.max | quote }}
+          - --users-start-time
+          - {{ .Values.users.startTime.max | quote }}
+          - {{ required "hub.url is required" .Values.hub.url | quote }}
+          - {{ .Values.users.count | quote }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: stress
-        env:
-          - name: HUB_URL
-            value: {{ required "hub.url is required" .Values.hub.url | quote }}
-          - name: RUN_COUNT
-            value: {{ .Values.users.count | quote }}
-          - name: MAX_START_TIME
-            value: {{ .Values.users.startTime.max | quote }}
-          - name: MIN_RUN_TIME
-            value: {{ .Values.users.runTime.min | quote }}
-          - name: MAX_RUN_TIME
-            value: {{ .Values.users.runTime.max | quote }}
