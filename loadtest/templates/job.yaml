@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jh-load-{{ .Release.Name }}
+  labels:
+    heritage: {{ .Release.Service }}
+    app: jupyterhub-loadtest
+    release: {{ .Release.Name }}
+spec:
+  completions: {{ .Values.completions }}
+  parallelism: {{ default .Values.parallelism .Values.completions }}
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        heritage: {{ .Release.Service }}
+        app: jupyterhub-loadtest
+        release: {{ .Release.Name }}
+    spec:
+      restartPolicy: Never
+      containers:
+      - args:
+          - /bin/sh
+          - -c
+          - "node --trace-warnings stress.js ${HUB_URL} ${RUN_COUNT} ${MIN_RUN_TIME} ${MAX_RUN_TIME} `hostname` ${MAX_START_TIME}"
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        name: stress
+        env:
+          - name: HUB_URL
+            value: {{ required "hub.url is required" .Values.hub.url | quote }}
+          - name: RUN_COUNT
+            value: {{ .Values.users.count | quote }}
+          - name: MAX_START_TIME
+            value: {{ .Values.users.startTime.max | quote }}
+          - name: MIN_RUN_TIME
+            value: {{ .Values.users.runTime.min | quote }}
+          - name: MAX_RUN_TIME
+            value: {{ .Values.users.runTime.max | quote }}

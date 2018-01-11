@@ -2,38 +2,34 @@
 Load Testing helper scripts for JupyterHubs
 
 ## Usage
-1. Make sure you have `kubectl` set up and pointing to the cluster and namespace you want to test.
-2. Make sure your cluster has "dummy" auth configuration set with
-   password "wat" (look in `stress.js` to see wat I mean)
-2. `./runjob.bash NUM_RUNS RUN_COUNT DELAY CONNECT_IP`
-    1. `NUM_RUNS`: How many times you want to run the load test.
-    2. `RUN_COUNT`: How many simultaneous users you want to test in each run.
-    3. `DELAY`: Delay between runs.
-    4. `CONNECT_IP`: Public-facing hub proxy IP (i.e. where you go to log in). 
-       If you have DNS set up, you could use this too.
+
+We use [helm](http://helm.sh/) to spawn the tests!
+
+1. Make sure you have helm installed and configured.
+2. Prepare a configuration file. We use YAML, and you can find all the possible options in
+   `loadtest/values.yaml`. At a minimum, you require:
+
+   ```yaml
+   hub:
+     url: <full-url-to-your-hub>
+   ```
+2. Install the chart:
+
+   ```bash
+   helm upgrade --install --wait --namespace=<test-run-name> <test-run-name> loadtest -f config.yaml
+   ```
+
+   Where `<test-run-name>` is just a unique name you can use to identify this particular run.
 
 
-## Checking results
-Upon running the above, you'll see output like this (varying upon your config).
+3. Tail the logs of the spawned pods to see results. Centralized log collection is *coming soon*.
 
+## Cleaning up
+
+You can delete the helm release easily with:
+
+```bash
+helm delete --purge <test-run-name>
 ```
-[christian@christian-thinkpad jupyterhub-loadtest]$ ./runjob.bash 1 3 3 35.188.241.177
-pod "j-b-1-c" configured
-```
 
-Then, you can run (subbing in the name of your pods)
-```
-kubectl logs j-b-1-c
-```
- to get JSON logs back from the server. Parse these at your pleasure.
-
-## Interesting metrics (incl. parsing recipes)
-This section is in-progress.
-
-
-## Running more tests
-Make sure to clear out the old pods..
-
-```
-kubectl delete pods j-b-1-c
-```
+Make sure to delete all the pods spawned by the hub before starting another test!
