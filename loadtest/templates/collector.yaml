@@ -59,3 +59,16 @@ spec:
   - protocol: TCP
     port: 5170
     targetPort: 5170
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: collector
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      heritage: {{ .Release.Service }}
+      app: jupyterhub-loadtest
+      release: {{ .Release.Name }}
+      component: collector
