@@ -6,7 +6,23 @@ const services = require('@jupyterlab/services');
 const ws = require('ws');
 const xhr = require('./xhr');
 const url = require('url');
+const winston = require('winston');
 var program = require('commander');
+
+const eventEmitter = winston.createLogger({
+    level: 'info',
+    format: winston.format.json({
+        replacer: (k, v) => {
+            if (k == 'message' || k == 'level') { return undefined; };
+            return v;
+        }
+    }),
+    transports: [
+        new winston.transports.Console({
+            showLevel: false,
+        })
+    ]
+});
 
 class User {
 
@@ -22,7 +38,7 @@ class User {
         event['type'] = type;
         event['timestamp'] = Date.now();
         event['user'] = this.username;
-        console.log(JSON.stringify(event));
+        eventEmitter.info('', event);
     }
 
     async login() {
