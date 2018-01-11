@@ -1,0 +1,61 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: collector
+  labels:
+    heritage: {{ .Release.Service }}
+    app: jupyterhub-loadtest
+    release: {{ .Release.Name }}
+    component: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      heritage: {{ .Release.Service }}
+      app: jupyterhub-loadtest
+      release: {{ .Release.Name }}
+      component: collector
+  template:
+    metadata:
+      labels:
+        heritage: {{ .Release.Service }}
+        app: jupyterhub-loadtest
+        release: {{ .Release.Name }}
+        component: collector
+    spec:
+      containers:
+      - name: fluent-bit
+        image: fluent/fluent-bit:0.12
+        ports:
+        - containerPort: 5170
+        workingDir: /srv
+        command:
+          - /fluent-bit/bin/fluent-bit
+          - -R
+          - /fluent-bit/etc/parsers.conf
+          - -i
+          - tcp
+          - -o
+          - file
+          - -p
+          - path=events.log
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: collector
+  labels:
+    heritage: {{ .Release.Service }}
+    app: jupyterhub-loadtest
+    release: {{ .Release.Name }}
+    component: collector
+spec:
+  selector:
+    heritage: {{ .Release.Service }}
+    app: jupyterhub-loadtest
+    release: {{ .Release.Name }}
+    component: collector
+  ports:
+  - protocol: TCP
+    port: 5170
+    targetPort: 5170

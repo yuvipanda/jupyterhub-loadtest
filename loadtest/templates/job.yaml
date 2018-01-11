@@ -29,6 +29,8 @@ spec:
           - {{ .Values.users.runTime.max | quote }}
           - --users-start-time
           - {{ .Values.users.startTime.max | quote }}
+          - --events-tcp-server
+          - $(COLLECTOR_SERVICE_HOST):$(COLLECTOR_SERVICE_PORT)
           - {{ required "hub.url is required" .Values.hub.url | quote }}
           - {{ .Values.users.count | quote }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
