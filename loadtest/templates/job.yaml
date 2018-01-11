@@ -18,6 +18,20 @@ spec:
         release: {{ .Release.Name }}
     spec:
       restartPolicy: Never
+      serviceAccountName: collector-waiter
+      initContainers:
+      # Make sure we wait until the collector is ready before starting our stress tests
+      # This way we don't lose any events!
+      - command:
+          - kubectl
+          - --namespace
+          - {{ .Release.Namespace }}
+          - rollout
+          - status
+          - --watch
+          - deployment/collector
+        image: yuvipanda/kubectl:v1.9.0
+        name: wait-for-collector
       containers:
       - command:
           - node
@@ -36,3 +50,51 @@ spec:
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: stress
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: collector-waiter
+rules:
+- apiGroups: ["apps", "extensions"] # "" indicates the core API group
+  resources: ["deployments"]
+  verbs: ["get"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: collector-waiter-kubectl
+rules:
+- nonResourceURLs: ["/api/*", "/apis/*"]
+  verbs: ["get"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: collector-waiter
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: collector-waiter
+roleRef:
+  kind: Role
+  name: collector-waiter
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: collector-waiter-kubectl
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: collector-waiter
+roleRef:
+  kind: ClusterRole
+  name: collector-waiter-kubectl
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collector-waiter
