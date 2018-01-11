@@ -47,10 +47,11 @@ class User {
         this.notebookUrl = this.hubUrl + '/user/' + this.username;
     }
 
-    emitEvent(type, event) {
+    emitEvent(type, duration=0, event={}) {
         event['type'] = type;
         event['timestamp'] = Date.now();
         event['user'] = this.username;
+        event['duration'] = duration[0] * 1000 + duration[1] / 1000000;
         eventEmitter.info(event);
     }
 
@@ -66,10 +67,10 @@ class User {
                 resolveWithFullResponse: true
             });
             let timeTaken = process.hrtime(startTime);
-            this.emitEvent('login.success', {duration: timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+            this.emitEvent('login.success', timeTaken);
         } catch(c) {
             let timeTaken = process.hrtime(startTime);
-            this.emitEvent('login.failure', {duration: timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+            this.emitEvent('login.failure', timeTaken);
         }
     }
 
@@ -92,7 +93,7 @@ class User {
                 // LOL @ STATE OF ERROR HANDLING IN JS?!@?
                 let timeTaken = process.hrtime(startTime);
                 if (e.message.startsWith('Error: Exceeded maxRedirects. Probably stuck in a redirect loop ')) {
-                    this.emitEvent('server-start.toomanyredirects', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+                    this.emitEvent('server-start.toomanyredirects', timeTaken);
                 } else {
                     console.log(e.stack);
                 }
@@ -100,7 +101,7 @@ class User {
             }
             if (resp.request.uri.href == expectedUrl) {
                 let timeTaken = process.hrtime(startTime);
-                this.emitEvent('server-start.success', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+                this.emitEvent('server-start.success', timeTaken);
                 return true;
             } else {
                 nextUrl = resp.request.uri.href;
@@ -108,7 +109,7 @@ class User {
             }
         }
         let timeTaken = process.hrtime(startTime);
-        this.emitEvent('server-start.failed', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+        this.emitEvent('server-start.failed', timeTaken);
         return false;
     };
 
@@ -127,10 +128,10 @@ class User {
                 headers: headers
             });
             let timeTaken = process.hrtime(startTime);
-            this.emitEvent('server-stop.success', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+            this.emitEvent('server-stop.success', timeTaken);
         } catch(e) {
             let timeTaken = process.hrtime(startTime);
-            this.emitEvent('server-stop.failure', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+            this.emitEvent('server-stop.failure', timeTaken);
         }
 
     }
@@ -156,7 +157,7 @@ class User {
 
             let failure = () => {
                 let timeTaken = process.hrtime(startTime);
-                this.emitEvent('kernel-start.failure', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+                this.emitEvent('kernel-start.failure', timeTaken);
                 reject();
             };
             services.Kernel.getSpecs(serverSettings).then((kernelSpecs) => {
@@ -174,7 +175,7 @@ class User {
                 });
             });
             let timeTaken = process.hrtime(startTime);
-            this.emitEvent('kernel-start.success', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+            this.emitEvent('kernel-start.success', timeTaken);
         });
     }
 
@@ -183,7 +184,7 @@ class User {
         if (this.kernel) {
             await this.kernel.shutdown();
             let timeTaken = process.hrtime(startTime);
-            this.emitEvent('kernel-stop.success', {'duration': timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+            this.emitEvent('kernel-stop.success', timeTaken);
         }
     }
 
@@ -197,7 +198,7 @@ class User {
 
             let executeFib = () => {
                 if (cancelled) {
-                    this.emitEvent('code-execute.complete', {});
+                    this.emitEvent('code-execute.complete');
                     resolve();
                     return;
                 }
@@ -206,7 +207,7 @@ class User {
                 let startTime = process.hrtime();
                 let failureTimer = setTimeout(() => {
                     let timeTaken = process.hrtime(startTime);
-                    this.emitEvent('code-execute.timeout', {duration: timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+                    this.emitEvent('code-execute.timeout', timeTaken);
                     reject();
                 }, 1000);
                 future.onIOPub = (msg) => {
@@ -214,7 +215,7 @@ class User {
                     let timeTaken = process.hrtime(startTime);
                     if (msg.content.text == '6765\n') {
                         setTimeout(executeFib, 1000);
-                        this.emitEvent('code-execute.success', {duration: timeTaken[0] * 1000 + timeTaken[1] / 1000000});
+                        this.emitEvent('code-execute.success', timeTaken);
                     }
                 };
             };
