@@ -7,20 +7,33 @@ const ws = require('ws');
 const xhr = require('./xhr');
 const url = require('url');
 const winston = require('winston');
+const winstonTcp = require('winston-tcp');
 var program = require('commander');
 
-const eventEmitter = winston.createLogger({
+function justMetaFormatter(k, v) {
+    // Remove the message and level keys, which are automatically added by winston
+    if (k == 'message' || k == 'level') { return undefined; };
+    return v;
+}
+const eventEmitter = new winston.Logger({
     level: 'info',
-    format: winston.format.json({
-        replacer: (k, v) => {
-            if (k == 'message' || k == 'level') { return undefined; };
-            return v;
-        }
-    }),
     transports: [
         new winston.transports.Console({
             showLevel: false,
+            formatter: (opts) => {
+                return JSON.stringify(opts.meta, justMetaFormatter);
+            },
+        }),
+        new winstonTcp({
+            host: '127.0.0.1',
+            port: 5170,
+            json: true,
+            timestamp: false,
+            formatter: (opts) => {
+                return JSON.stringify(opts.meta, justMetaFormatter);
+            },
         })
+
     ]
 });
 
@@ -38,7 +51,7 @@ class User {
         event['type'] = type;
         event['timestamp'] = Date.now();
         event['user'] = this.username;
-        eventEmitter.info('', event);
+        eventEmitter.info(event);
     }
 
     async login() {
