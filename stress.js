@@ -200,33 +200,37 @@ class User {
     }
 
 }
+function justMetaFormatter(k, v) {
+    // Remove the message and level keys, which are automatically added by winston
+    if (k == 'message' || k == 'level') { return undefined; };
+    return v;
+}
 
 function main(hubUrl, userCount) {
-    function justMetaFormatter(k, v) {
-        // Remove the message and level keys, which are automatically added by winston
-        if (k == 'message' || k == 'level') { return undefined; };
-        return v;
-    }
-    const eventEmitter = new winston.Logger({
-        level: 'info',
-        transports: [
-            new winston.transports.Console({
-                showLevel: false,
-                formatter: (opts) => {
-                    return JSON.stringify(opts.meta, justMetaFormatter);
-                },
-            }),
 
-        ]
-    });
+    console.log(`Loading ${userCount} users on ${hubUrl}`);
+    console.log(`Will complete spawning all users by ${program.usersStartTime}s`);
+    console.log(`Users will start dropping off after ${program.minUserActiveTime}s`);
+    console.log(`Users will be all gone by ${program.maxUserActiveTime}s`);
+    console.log(`Users will have random names prefixed with ${program.userPrefix}`);
+
+    let transports = [
+        new winston.transports.Console({
+            showLevel: false,
+            formatter: (opts) => {
+                return JSON.stringify(opts.meta, justMetaFormatter);
+            },
+        }),
+    ];
+
 
     if (program.eventsTcpServer) {
+        console.log(`Sending event stream data to ${program.eventsTcpServer}`);
         const [host, port] = program.eventsTcpServer.split(':');
-        eventEmitter.transports.push(
+        transports.push(
             new winstonTcp({
                 host: host,
                 port: parseInt(port),
-                json: true,
                 timestamp: false,
                 formatter: (opts) => {
                     return JSON.stringify(opts.meta, justMetaFormatter);
@@ -235,13 +239,17 @@ function main(hubUrl, userCount) {
         );
     }
 
+    const eventEmitter = new winston.Logger({
+        level: 'info',
+        transports: transports
+    });
+
     async function launch(i) {
 
         // Wait for a random amount of time before actually launching
         await new Promise(r => setTimeout(r, Math.random() * program.usersStartTime * 1000));
 
         const u = new User(hubUrl, program.userPrefix + String(i), 'wat', eventEmitter);
-
         const userActiveDurationSeconds = parseFloat(program.minUserActiveTime) + (Math.random() * (parseFloat(program.maxUserActiveTime) - parseFloat(program.minUserActiveTime)));
         await u.login();
         await u.startServer();
