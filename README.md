@@ -20,9 +20,25 @@ We use [helm](http://helm.sh/) to spawn the tests!
    ```
 
    Where `<test-run-name>` is just a unique name you can use to identify this particular run.
+   Make sure you use a unique namespace and release name for each run!
 
+3. You can look at the events being generated in many ways:
 
-3. Tail the logs of the spawned pods to see results. Centralized log collection is *coming soon*.
+   a. Tailing the logs of the individual load test pods with `kubectl logs`. This is just the
+      `stderr` and `stdout` of the process, which is mingled JSON events + logs.
+   b. Tail the logs of the `collector`, which is aggregating just events. This is in the format
+      of fluent-bit's [out_file](http://fluentbit.io/documentation/0.12/output/file.html). Some logging
+      is also co-mingled here.
+   c. Copy the aggregated logs out of the collector pod. You can do this with a `kubectl cp` command,
+      like:
+
+      ```bash
+      kubectl --namespace=<test-run-name> cp  $(kubectl --namespace=<test-run-name> get pod -l component=collector -o name | sed 's:pods/::'):/srv/events.log events.log
+      ```
+
+      This should copy *just* the events into `events.log` in your current directory. They're in the same
+      `out_file` format, from which JSON can be easily extracted. There should be no other logs co-mingled
+      here, so this is the best method for further analysis.
 
 ## Cleaning up
 

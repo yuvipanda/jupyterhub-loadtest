@@ -38,7 +38,13 @@ spec:
           - -o
           - file
           - -p
-          - path=events.log
+          - path=/srv/events.log
+          - -p
+          - match=*
+          - -o
+          - stdout
+          - -p
+          - match=*
 ---
 kind: Service
 apiVersion: v1
