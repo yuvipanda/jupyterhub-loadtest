@@ -1,3 +1,5 @@
+# DEPRECATED! Use [https://github.com/yuvipanda/hubtraf](hubtraf) instead
+
 # jupyterhub-loadtest
 Load Testing helper scripts for JupyterHubs
 
